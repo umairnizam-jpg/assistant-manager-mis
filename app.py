@@ -1,53 +1,62 @@
 import streamlit as st
 import pandas as pd
-import os
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain_groq import ChatGroq
 
 # ==========================================
-# 1. PAGE CONFIG & PROFESSOR AESTHETICS (RED/WHITE/BLACK)
+# 1. HIGH-END UI DESIGN (RED, BLACK, WHITE)
 # ==========================================
-st.set_page_config(page_title="Assistant Manager MIS", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Assistant Manager MIS", page_icon="👨‍🏫", layout="centered")
 
-# Custom CSS for the "Professor" Look and Red/Black/White Theme
 st.markdown("""
     <style>
-    /* Main Background */
-    .stApp { background-color: #ffffff; }
+    /* Global Styles */
+    .stApp { background-color: #f4f4f4; }
     
-    /* Sidebar Styling */
-    [data-testid="stSidebar"] {
-        background-color: #111111;
-        color: white;
-    }
-    
-    /* Professional Headers */
-    h1 { color: #cc0000; font-family: 'Georgia', serif; font-weight: bold; border-bottom: 3px solid #111111; }
-    
-    /* Buttons - Red and Black Theme */
-    .stButton>button {
-        background-color: #cc0000;
-        color: white;
-        border: none;
-        border-radius: 2px;
-        font-weight: bold;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #000000;
+    /* Main Header Styling */
+    .main-title {
         color: #cc0000;
-        border: 1px solid #cc0000;
+        font-family: 'Helvetica Neue', sans-serif;
+        font-size: 32px;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 5px;
     }
     
-    /* Chat Message Bubbles */
+    /* Floating Chat Bubble Look */
     [data-testid="stChatMessage"] {
-        background-color: #f1f1f1;
-        border-left: 5px solid #cc0000;
-        border-radius: 5px;
+        border-radius: 20px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+        max-width: 85%;
     }
     
-    /* Input Box */
-    .stTextInput>div>div>input { border: 2px solid #111111; }
+    /* User Message (Right Side / Black) */
+    [data-testid="stChatMessage"]:nth-child(even) {
+        background-color: #111111 !important;
+        color: white !important;
+        margin-left: auto;
+        border-bottom-right-radius: 2px;
+    }
+
+    /* Assistant Message (Left Side / Red Accent) */
+    [data-testid="stChatMessage"]:nth-child(odd) {
+        background-color: #ffffff !important;
+        border-left: 6px solid #cc0000;
+        margin-right: auto;
+        border-bottom-left-radius: 2px;
+    }
+
+    /* Sidebar - Sleek Black */
+    [data-testid="stSidebar"] { background-color: #000000 !important; }
+    [data-testid="stSidebar"] * { color: white !important; }
+
+    /* Floating Input Field */
+    .stChatInputContainer {
+        padding-bottom: 20px;
+        background-color: transparent !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -57,89 +66,86 @@ st.markdown("""
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
-def login():
-    st.markdown("<h1 style='text-align: center;'>OFFICE OF THE ASSISTANT MANAGER MIS</h1>", unsafe_allow_html=True)
+def login_screen():
+    st.markdown("<div class='main-title'>OFFICE OF THE PROFESSOR</div>", unsafe_allow_html=True)
+    st.write("<p style='text-align: center;'>Strategic Management & MIS Engine</p>", unsafe_allow_html=True)
+    
     with st.container():
-        _, mid, _ = st.columns([1,2,1])
-        with mid:
-            st.info("Please enter your corporate credentials to access the MIS Data Engine.")
-            with st.form("login"):
-                user = st.text_input("Staff ID")
-                pwd = st.text_input("Security Key", type="password")
-                if st.form_submit_button("Verify Identity"):
-                    if user == "admin" and pwd == "mis2026": # You can change these
-                        st.session_state["authenticated"] = True
-                        st.rerun()
-                    else:
-                        st.error("Unauthorized Access Attempt.")
+        _, col, _ = st.columns([0.5, 1, 0.5])
+        with col:
+            st.markdown("---")
+            user = st.text_input("Staff ID")
+            pin = st.text_input("Security PIN", type="password")
+            if st.button("Enter Portal"):
+                if user == "admin" and pin == "mis2026":
+                    st.session_state["authenticated"] = True
+                    st.rerun()
+                else:
+                    st.error("Invalid Credentials")
 
 if not st.session_state["authenticated"]:
-    login()
+    login_screen()
     st.stop()
 
 # ==========================================
-# 3. THE "PROFESSOR" BRAIN (MIS LOGIC)
+# 3. CHAT INTERFACE & ENGINE
 # ==========================================
-# Use Streamlit Secrets for Deployment or paste your key here
 GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "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")
 
-st.markdown("<h1>Assistant Manager MIS</h1>", unsafe_allow_html=True)
-st.caption("Strategic Intelligence & Data Analysis Portal")
+st.markdown("<div class='main-title'>Assistant Manager MIS</div>", unsafe_allow_html=True)
 
 with st.sidebar:
-    st.title("🗄️ Control Desk")
-    st.write(f"**Current User:** Admin")
-    if st.button("Terminate Session"):
+    st.markdown("### 👨‍🏫 Session Controls")
+    if st.button("Secure Logout"):
         st.session_state["authenticated"] = False
         st.rerun()
     st.divider()
-    uploaded_file = st.file_uploader("Feed Data to the Engine (.xlsx)", type=["xlsx"])
+    uploaded_file = st.file_uploader("Internalize Ledger (Excel)", type=["xlsx"])
+    if uploaded_file:
+        st.success("Ledger Synchronized.")
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
     
-    # Ensure date columns are actual dates for Quarter/Yearly logic
+    # Auto-Cleaning for Dates (Essential for Quarters/Yearly)
     for col in df.columns:
         if 'date' in col.lower():
-            df[col] = pd.to_datetime(df[col], errors='ignore')
+            df[col] = pd.to_datetime(df[col], errors='coerce')
 
     if "messages" not in st.session_state:
-        st.session_state.messages = [{"role": "assistant", "content": "The data has been internalized. I am ready to provide summaries, achievement metrics, or quarterly insights. What is your inquiry?"}]
+        st.session_state.messages = [{"role": "assistant", "content": "Welcome. I am the Assistant Manager MIS. I have analyzed your dataset. What complex metrics or sums shall we solve today?"}]
 
+    # Render Chat
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+            st.write(msg["content"])
 
-    if prompt := st.chat_input("Enter your search (e.g., 'What is the sum of sales for Q2?')"):
+    # Chat logic
+    if prompt := st.chat_input("Ask about Achievement, Quarters, or Yearly Sums..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
-            st.markdown(prompt)
+            st.write(prompt)
 
         with st.chat_message("assistant"):
-            with st.spinner("Analyzing Ledger..."):
-                # ADVANCED MIS INSTRUCTIONS
-                professor_logic = """
-                You are the 'Assistant Manager MIS'. You speak with the authority and precision of a university professor.
-                
-                YOUR CAPABILITIES:
-                1. SUMS: Automatically calculate total sums for any column mentioned.
-                2. QUARTERLY/YEARLY: If a date column exists, group data by Quarter (Q1, Q2, etc.) or Year when asked.
-                3. ACHIEVEMENT: Achievement % = (Actual / Target) * 100. Always look for columns representing 'Actual' and 'Target' (even if named 'Sales' and 'Goal').
-                4. ACCURACY: No matter how the user types (even with bad grammar), identify their intent.
-                5. FORMATTING: Use commas for numbers (1,000,000), 2 decimal places, and NEVER use scientific notation (e+08).
-                
-                If the user search is vague, analyze the most relevant column and provide a summary.
-                """
-
-                llm = ChatGroq(model_name="llama-3.3-70b-versatile", groq_api_key=GROQ_API_KEY, temperature=0)
-                agent = create_pandas_dataframe_agent(
-                    llm, df, verbose=False, agent_type="tool-calling", 
-                    allow_dangerous_code=True, prefix=professor_logic
-                )
-                
+            # SYSTEM RULES
+            rules = """
+            You are the 'Assistant Manager MIS', acting as a highly intellectual Professor.
+            Your logic is flawless. 
+            - CALCULATIONS: Always calculate 'Achievement' as (Actual/Target)*100.
+            - QUARTERS/YEARS: If asked, group data by dates (Q1, Q2, etc.).
+            - PRECISION: Round all numbers to 2 decimals and use commas (1,234,567.89).
+            - NO SCIENTIFIC NOTATION: Never use e+08.
+            - TONE: Professional, authoritative, and direct.
+            """
+            
+            llm = ChatGroq(model_name="llama-3.3-70b-versatile", groq_api_key=GROQ_API_KEY, temperature=0)
+            agent = create_pandas_dataframe_agent(llm, df, allow_dangerous_code=True, prefix=rules)
+            
+            with st.spinner("Processing inquiry..."):
                 response = agent.invoke(prompt)
-                ans = response["output"]
-                st.markdown(ans)
-                st.session_state.messages.append({"role": "assistant", "content": ans})
+                output = response["output"]
+                st.write(output)
+                st.session_state.messages.append({"role": "assistant", "content": output})
+
 else:
-    st.warning("Awaiting Excel Ledger Upload...")
+    st.warning("Please provide the Excel Ledger in the sidebar to initiate analysis.")
