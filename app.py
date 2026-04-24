@@ -5,122 +5,141 @@ from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain_groq import ChatGroq
 
 # ==========================================
-# 1. PAGE CONFIGURATION & PROFESSIONAL UI
+# 1. PAGE CONFIG & PROFESSOR AESTHETICS (RED/WHITE/BLACK)
 # ==========================================
-st.set_page_config(page_title="Assistant Manager MIS", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Assistant Manager MIS", page_icon="📈", layout="wide")
 
+# Custom CSS for the "Professor" Look and Red/Black/White Theme
 st.markdown("""
     <style>
-    .stApp { background-color: #f8f9fa; }
-    .stButton>button { background-color: #0056b3; color: white; border-radius: 5px; width: 100%; }
-    .stTextInput>div>div>input { border-radius: 5px; }
-    h1 { color: #2c3e50; font-family: 'Segoe UI', sans-serif; }
-    .chat-header { font-size: 1.1rem; color: #6c757d; margin-bottom: 20px; }
+    /* Main Background */
+    .stApp { background-color: #ffffff; }
+    
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background-color: #111111;
+        color: white;
+    }
+    
+    /* Professional Headers */
+    h1 { color: #cc0000; font-family: 'Georgia', serif; font-weight: bold; border-bottom: 3px solid #111111; }
+    
+    /* Buttons - Red and Black Theme */
+    .stButton>button {
+        background-color: #cc0000;
+        color: white;
+        border: none;
+        border-radius: 2px;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+    .stButton>button:hover {
+        background-color: #000000;
+        color: #cc0000;
+        border: 1px solid #cc0000;
+    }
+    
+    /* Chat Message Bubbles */
+    [data-testid="stChatMessage"] {
+        background-color: #f1f1f1;
+        border-left: 5px solid #cc0000;
+        border-radius: 5px;
+    }
+    
+    /* Input Box */
+    .stTextInput>div>div>input { border: 2px solid #111111; }
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. AUTHENTICATION SYSTEM
+# 2. LOGIN SYSTEM
 # ==========================================
-USER_CREDENTIALS = {
-    "admin": "password123",
-    "manager": "mis2026"
-}
-
-def login():
-    st.title("🔒 MIS Portal Login")
-    with st.container():
-        left, mid, right = st.columns([1,2,1])
-        with mid:
-            with st.form("login_form"):
-                username = st.text_input("Username")
-                password = st.text_input("Password", type="password")
-                submit = st.form_submit_button("Access System")
-                if submit:
-                    if username in USER_CREDENTIALS and USER_CREDENTIALS[username] == password:
-                        st.session_state["authenticated"] = True
-                        st.session_state["username"] = username
-                        st.rerun()
-                    else:
-                        st.error("Invalid credentials.")
-
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
+
+def login():
+    st.markdown("<h1 style='text-align: center;'>OFFICE OF THE ASSISTANT MANAGER MIS</h1>", unsafe_allow_html=True)
+    with st.container():
+        _, mid, _ = st.columns([1,2,1])
+        with mid:
+            st.info("Please enter your corporate credentials to access the MIS Data Engine.")
+            with st.form("login"):
+                user = st.text_input("Staff ID")
+                pwd = st.text_input("Security Key", type="password")
+                if st.form_submit_button("Verify Identity"):
+                    if user == "admin" and pwd == "mis2026": # You can change these
+                        st.session_state["authenticated"] = True
+                        st.rerun()
+                    else:
+                        st.error("Unauthorized Access Attempt.")
 
 if not st.session_state["authenticated"]:
     login()
     st.stop()
 
 # ==========================================
-# 3. MAIN APP: ASSISTANT MANAGER MIS
+# 3. THE "PROFESSOR" BRAIN (MIS LOGIC)
 # ==========================================
+# Use Streamlit Secrets for Deployment or paste your key here
+GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "PASTE_YOUR_KEY_HERE")
 
-# INPUT YOUR GROQ API KEY HERE
-GROQ_API_KEY = "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" 
-
-st.title("📊 Assistant Manager MIS")
-st.markdown(f"<div class='chat-header'>User Session: **{st.session_state['username'].upper()}** | Mode: Data Analysis</div>", unsafe_allow_html=True)
+st.markdown("<h1>Assistant Manager MIS</h1>", unsafe_allow_html=True)
+st.caption("Strategic Intelligence & Data Analysis Portal")
 
 with st.sidebar:
-    st.header("Office Controls")
-    if st.button("Logout"):
+    st.title("🗄️ Control Desk")
+    st.write(f"**Current User:** Admin")
+    if st.button("Terminate Session"):
         st.session_state["authenticated"] = False
         st.rerun()
-    
     st.divider()
-    uploaded_file = st.file_uploader("Upload MIS Data (Excel)", type=["xlsx"])
+    uploaded_file = st.file_uploader("Feed Data to the Engine (.xlsx)", type=["xlsx"])
+
+if uploaded_file:
+    df = pd.read_excel(uploaded_file)
     
-    if uploaded_file:
-        st.info("File received. Processing...")
+    # Ensure date columns are actual dates for Quarter/Yearly logic
+    for col in df.columns:
+        if 'date' in col.lower():
+            df[col] = pd.to_datetime(df[col], errors='ignore')
 
-if uploaded_file is not None:
-    try:
-        # Load the Excel file
-        df = pd.read_excel(uploaded_file)
-        with st.expander("📁 View Raw Data Sheet"):
-            st.dataframe(df, use_container_width=True)
+    if "messages" not in st.session_state:
+        st.session_state.messages = [{"role": "assistant", "content": "The data has been internalized. I am ready to provide summaries, achievement metrics, or quarterly insights. What is your inquiry?"}]
 
-        # Initialize Chat
-        if "messages" not in st.session_state:
-            st.session_state.messages = [{"role": "assistant", "content": "I am ready. Ask me any question about the uploaded MIS report."}]
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+    if prompt := st.chat_input("Enter your search (e.g., 'What is the sum of sales for Q2?')"):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-        # Chat logic
-        if prompt := st.chat_input("Ex: What was the total revenue per region?"):
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            with st.chat_message("user"):
-                st.markdown(prompt)
+        with st.chat_message("assistant"):
+            with st.spinner("Analyzing Ledger..."):
+                # ADVANCED MIS INSTRUCTIONS
+                professor_logic = """
+                You are the 'Assistant Manager MIS'. You speak with the authority and precision of a university professor.
+                
+                YOUR CAPABILITIES:
+                1. SUMS: Automatically calculate total sums for any column mentioned.
+                2. QUARTERLY/YEARLY: If a date column exists, group data by Quarter (Q1, Q2, etc.) or Year when asked.
+                3. ACHIEVEMENT: Achievement % = (Actual / Target) * 100. Always look for columns representing 'Actual' and 'Target' (even if named 'Sales' and 'Goal').
+                4. ACCURACY: No matter how the user types (even with bad grammar), identify their intent.
+                5. FORMATTING: Use commas for numbers (1,000,000), 2 decimal places, and NEVER use scientific notation (e+08).
+                
+                If the user search is vague, analyze the most relevant column and provide a summary.
+                """
 
-            with st.chat_message("assistant"):
-                with st.spinner("Calculating..."):
-                    try:
-                        # Using Groq Llama 3 (Powerful and Free)
-                        llm = ChatGroq(
-                            temperature=0, 
-                            model_name="llama-3.3-70b-versatile", 
-                            groq_api_key=GROQ_API_KEY
-                        )
-                        
-                        agent = create_pandas_dataframe_agent(
-                            llm, 
-                            df, 
-                            verbose=False, 
-                            agent_type="tool-calling",
-                            allow_dangerous_code=True 
-                        )
-                        
-                        response = agent.invoke(prompt)
-                        ans = response["output"]
-                        
-                        st.markdown(ans)
-                        st.session_state.messages.append({"role": "assistant", "content": ans})
-                    except Exception as e:
-                        st.error(f"Analysis Error: {e}")
-
-    except Exception as e:
-        st.error(f"File Error: {e}")
+                llm = ChatGroq(model_name="llama-3.3-70b-versatile", groq_api_key=GROQ_API_KEY, temperature=0)
+                agent = create_pandas_dataframe_agent(
+                    llm, df, verbose=False, agent_type="tool-calling", 
+                    allow_dangerous_code=True, prefix=professor_logic
+                )
+                
+                response = agent.invoke(prompt)
+                ans = response["output"]
+                st.markdown(ans)
+                st.session_state.messages.append({"role": "assistant", "content": ans})
 else:
-    st.warning("Please upload an Excel file in the sidebar to activate the Assistant.")
+    st.warning("Awaiting Excel Ledger Upload...")
