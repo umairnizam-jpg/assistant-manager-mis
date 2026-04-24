@@ -81,7 +81,7 @@ if not st.session_state["authenticated"]:
 # 3. THE "PROFESSOR" BRAIN (MIS LOGIC)
 # ==========================================
 # Use Streamlit Secrets for Deployment or paste your key here
-GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "PASTE_YOUR_KEY_HERE")
+GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "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")
 
 st.markdown("<h1>Assistant Manager MIS</h1>", unsafe_allow_html=True)
 st.caption("Strategic Intelligence & Data Analysis Portal")
